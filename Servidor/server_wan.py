@@ -1,4 +1,4 @@
-# server_render.py
+# server_wan.py
 # Servidor WebSocket para WAN en Render.com
 
 import os
