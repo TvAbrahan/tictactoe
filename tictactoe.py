@@ -94,12 +94,19 @@ def botonClick(i):
 
 def ganador():
     global g
+    g = 1
+    ganador_texto = f"¡Jugador {display_player_num(jugador)} GANA!"
+    
+    # Actualizar el label principal en el tablero
     if texto is not None:
-        texto.config(text='Jugador '+str(display_player_num(jugador)) + ' GANO')
+        texto.config(text=ganador_texto, fg="red")
     else:
-        lblg = Label(tablero, text='Jugador '+str(display_player_num(jugador)) + ' GANO', font='arial, 20', fg='blue')
+        lblg = Label(tablero, text=ganador_texto, font='arial, 20', fg='red')
         lblg.place(x=20, y=5)
-    g=1
+    
+    # Mostrar ventana emergente
+    messagebox.showinfo("Resultado", ganador_texto)
+
 
 # -------- Funciones de líneas de victoria --------
 def horizontal(): s=0; [s:=s+jugadas[Z][Y][x] for x in range(4)]; return not (s<4 and s>-4)
@@ -336,7 +343,7 @@ def conectar_wan_render():
     global client_ws
 
     # !!! REEMPLAZA ESTE DOMINIO CON TU APP DE RENDER !!!
-    RENDER_URL = "tu-app.onrender.com"
+    RENDER_URL = "tictactoe-y0zv.onrender.com"
 
     full_url = f"wss://{RENDER_URL}/ws"
 
@@ -377,12 +384,7 @@ def seleccionar_modo_conexion():
 def iniciar_conexion():
     seleccionar_modo_conexion()
 
-# ----------- BOTONES (YA ORDENADOS) --------------
-btn_lan = Button(tablero, text="Conectar LAN", width=12, height=1, font=("Helvetica", 12), command=conectar_lan)
-btn_lan.place(x=850, y=20)
 
-btn_wan = Button(tablero, text="Conectar WAN (Render)", width=18, height=1, font=("Helvetica", 12), command=conectar_wan_render)
-btn_wan.place(x=820, y=60)
 
 tablero.after(100, iniciar_conexion)
 tablero.mainloop()

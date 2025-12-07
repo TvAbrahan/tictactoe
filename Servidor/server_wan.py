@@ -11,7 +11,7 @@ PORT = int(os.environ.get("PORT", 10000))
 
 board = [[[0 for _ in range(4)] for _ in range(4)] for _ in range(4)]
 clients = set()
-player_slots = [None, None]
+player_slots = [None, None]  # slots de jugador 0 y 1
 turn = 0
 
 def board_copy():
@@ -25,14 +25,28 @@ async def broadcast(obj):
         except:
             pass
 
+# Asignar jugador a slot libre o espectador
 async def assign_player(ws):
-    if player_slots[0] is None:
-        player_slots[0] = ws
-        return 0
-    if player_slots[1] is None:
-        player_slots[1] = ws
-        return 1
-    return None
+    for i in range(2):
+        if player_slots[i] is None:
+            player_slots[i] = ws
+            return i
+    return None  # espectador
+
+# Manejar desconexión y liberar slot
+async def player_disconnect(ws):
+    global board, turn
+    changed = False
+    for i in range(2):
+        if player_slots[i] == ws:
+            player_slots[i] = None
+            changed = True
+    if changed:
+        # Si ambos slots están libres, resetear tablero
+        if player_slots[0] is None and player_slots[1] is None:
+            board = [[[0 for _ in range(4)] for _ in range(4)] for _ in range(4)]
+            turn = 0
+            await broadcast({"type": "reset"})
 
 async def handle_message(ws, data):
     global turn, board
@@ -55,8 +69,10 @@ async def handle_message(ws, data):
         board[z][y][x] = -1 if p == 0 else 1
         await broadcast({"type": "move", "player": p, "x": x, "y": y, "z": z})
 
-        turn = 1 - turn
-        await broadcast({"type": "turn", "turn": turn})
+        # Cambiar turno solo si hay jugadores en ambos slots
+        if player_slots[0] is not None and player_slots[1] is not None:
+            turn = 1 - turn
+            await broadcast({"type": "turn", "turn": turn})
 
 async def handler(ws):
     global clients
@@ -66,10 +82,14 @@ async def handler(ws):
     await ws.send(json.dumps({"type": "assign", "player": p}))
     await ws.send(json.dumps({"type": "sync", "board": board_copy(), "turn": turn}))
 
-    async for msg in ws:
-        await handle_message(ws, json.loads(msg))
-
-    clients.remove(ws)
+    try:
+        async for msg in ws:
+            await handle_message(ws, json.loads(msg))
+    except:
+        pass
+    finally:
+        clients.remove(ws)
+        await player_disconnect(ws)
 
 async def main():
     print("Servidor WAN Render listo")
