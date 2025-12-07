@@ -9,6 +9,7 @@ import json
 HOST = "0.0.0.0"
 PORT = int(os.environ.get("PORT", 10000))
 
+# Tablero 4x4x4
 board = [[[0 for _ in range(4)] for _ in range(4)] for _ in range(4)]
 clients = set()
 player_slots = [None, None]  # slots de jugador 0 y 1
@@ -33,29 +34,34 @@ async def assign_player(ws):
             return i
     return None  # espectador
 
-# Manejar desconexión y liberar slot
+# Manejar desconexión y declarar ganador si aplica
 async def player_disconnect(ws):
     global board, turn
     for i in range(2):
         if player_slots[i] == ws:
-            # Slot liberado
             player_slots[i] = None
-            # Si hay otro jugador conectado, declararlo ganador
             other_player_idx = 1 - i
             if player_slots[other_player_idx] is not None:
-                # Notificar victoria por abandono
-                await broadcast({"type": "move", "player": other_player_idx, "x": -1, "y": -1, "z": -1, "victory": True})
-                # Resetear tablero después de notificar
-                board = [[[0]*4 for _ in range(4)] for _ in range(4)]
-                turn = 0
-                await broadcast({"type": "reset"})
-            else:
-                # Ambos jugadores desconectados, solo reset
-                board = [[[0]*4 for _ in range(4)] for _ in range(4)]
-                turn = 0
-                await broadcast({"type": "reset"})
-
-
+                # Otro jugador conectado -> gana automáticamente
+                await broadcast({
+                    "type": "move",
+                    "player": other_player_idx,
+                    "x": -1,
+                    "y": -1,
+                    "z": -1,
+                    "victory": True
+                })
+            # Resetear tablero y turno
+            board = [[[0 for _ in range(4)] for _ in range(4)] for _ in range(4)]
+            turn = 0
+            await broadcast({"type": "reset"})
+            # Liberar al otro jugador también
+            if player_slots[other_player_idx] is not None:
+                try:
+                    await player_slots[other_player_idx].close()
+                except:
+                    pass
+                player_slots[other_player_idx] = None
 
 async def handle_message(ws, data):
     global turn, board
@@ -70,9 +76,9 @@ async def handle_message(ws, data):
         p = data["player"]
         x, y, z = data["x"], data["y"], data["z"]
 
-        if p != turn:
+        if p != turn:  # no es su turno
             return
-        if board[z][y][x] != 0:
+        if board[z][y][x] != 0:  # casilla ocupada
             return
 
         board[z][y][x] = -1 if p == 0 else 1
