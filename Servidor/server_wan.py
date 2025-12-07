@@ -73,8 +73,8 @@ async def handler(ws):
 
 async def main():
     print("Servidor WAN Render listo")
-    print("Render asignará una URL WebSocket en /ws")
-    await websockets.serve(handler, HOST, PORT, path="/ws")
+    print("Render asignará una URL WebSocket")
+    await websockets.serve(handler, HOST, PORT)
     await asyncio.Future()
 
 asyncio.run(main())
