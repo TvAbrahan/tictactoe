@@ -41,12 +41,31 @@ async def player_disconnect(ws):
         if player_slots[i] == ws:
             player_slots[i] = None
             changed = True
+
     if changed:
+        # Verificar si queda un jugador conectado
+        remaining_player = None
+        for i in range(2):
+            if player_slots[i] is not None:
+                remaining_player = i
+
+        if remaining_player is not None:
+            # Solo un jugador se fue, el otro gana automáticamente
+            await broadcast({
+                "type": "move",
+                "player": remaining_player,
+                "x": -1,  # Indicamos que es victoria por desconexión
+                "y": -1,
+                "z": -1,
+                "victory": True
+            })
+
         # Si ambos slots están libres, resetear tablero
         if player_slots[0] is None and player_slots[1] is None:
             board = [[[0 for _ in range(4)] for _ in range(4)] for _ in range(4)]
             turn = 0
             await broadcast({"type": "reset"})
+
 
 async def handle_message(ws, data):
     global turn, board
